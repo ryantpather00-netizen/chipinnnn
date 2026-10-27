@@ -1,0 +1,74 @@
+{% extends 'chipin/base.html' %}
+{% block content %}
+<h1>Send Group Invite (via Web3Forms)</h1>
+<p><strong>Invitee:</strong> {{ invite.invited_user.username }}{% if invite.invitee_email %} &lt;{{ invite.invitee_email }}&gt;{% endif %}</p>
+<p>
+  <strong>Invite link (OK button target):</strong>
+  <input type="text" value="{{ accept_link }}" readonly style="width:100%">
+</p>
+<p>
+  {# if the user has an email, offer a mailto fallback #}
+  {% if invite.invitee_email %}
+    <a href="mailto:{{ invite.invitee_email }}?subject={{ group.name|urlencode }}%20invitation&body=Click%20OK%20to%20join:%20{{ accept_link|urlencode }}">
+      Open email client
+    </a>
+  {% else %}
+    <em>This user has no email on file—copy the link above and share directly.</em>
+  {% endif %}
+</p>
+<form id="w3f" action="https://api.web3forms.com/submit" method="POST" novalidate>
+  <input type="hidden" name="access_key" value="{{ WEB3FORMS_ACCESS_KEY }}">
+  <input type="hidden" name="subject" value="Group Invite: {{ group.name }}">
+  <input type="hidden" name="from_name" value="{{ request.user.get_full_name|default:request.user.username }}">
+  <input type="hidden" name="replyto" value="{{ request.user.email }}">
+  <div>
+    <label>Your message (sent to the access-key owner / teacher)</label>
+    <textarea name="message" rows="6">Please invite {{ invite.invited_user.username }}{% if invite.invitee_email %} ({{ invite.invitee_email }}){% endif %} to "{{ group.name }}".
+They can join by clicking the OK link:
+{{ accept_link }}
+Thanks,
+{{ request.user.get_full_name|default:request.user.username }}</textarea>
+  </div>
+  <button type="submit" id="sendBtn">Send via Web3Forms</button>
+  <span id="status" style="margin-left:.5rem"></span>
+</form>
+<p style="margin-top:1rem">
+  <em>Notes:</em> On the free plan, this form emails the submission to the
+  address tied to your Web3Forms access key (usually the teacher). You can then forward it to the student.
+  With Web3Forms Pro (autoresponder), you can automate emailing the invitee.
+</p>
+<script>
+(function() {
+  const form = document.getElementById('w3f');
+  const btn  = document.getElementById('sendBtn');
+  const status = document.getElementById('status');
+  const thankYou = "{{ redirect_url|escapejs }}";
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    status.textContent = 'Sending…';
+    btn.disabled = true;
+    try {
+      const data = new FormData(form);
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: data,
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) {
+        window.location.href = thankYou;
+        return;
+      }
+      const json = await res.json().catch(() => ({}));
+      if (json && json.success) {
+        window.location.href = thankYou;
+      } else {
+        status.textContent = (json && json.message) ? json.message : 'Send failed. Please try again.';
+        btn.disabled = false;
+      }
+    } catch (err) {
+      window.location.href = thankYou;
+    }
+  });
+})();
+</script>
+{% endblock %}

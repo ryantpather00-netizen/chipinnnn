@@ -1,0 +1,18 @@
+{% extends 'chipin/base.html' %}
+{% block content %}
+  <h1>Invite a user to {{ group.name }}</h1>
+  <form method="post">
+    {% csrf_token %}
+    <label for="invited_user_id">Select user</label>
+    <select name="invited_user_id" id="invited_user_id" required>
+      <option value="" disabled selected>-- choose a user --</option>
+      {% for u in users_not_in_group %}
+        <option value="{{ u.id }}">{{ u.username }}{% if u.email %} ({{ u.email }}){% endif %}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Create Invite</button>
+  </form>
+  <p style="margin-top:1rem">
+    You’ll be taken to a “Send Invite” page where you can send via Web3Forms or copy the join link.
+  </p>
+{% endblock %}

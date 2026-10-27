@@ -1,0 +1,54 @@
+{% extends 'chipin/base.html' %}
+{% load static %}
+{% block title %}Login - ChipIn{% endblock %}
+{% block content %}
+<div class="login-container">
+  <form id="login-form" action="{% url 'users:login' %}" method="post" onsubmit="return executeRecaptcha();" autocomplete="off">
+    {% csrf_token %}
+
+    <!-- Honeypot: random name passed from server -->
+    <input type="text" name="{{ hp_name }}"
+           autocomplete="new-password" tabindex="-1" aria-hidden="true" inputmode="none"
+           style="position:absolute; left:-10000px; top:auto; width:1px; height:1px; overflow:hidden;">
+
+    <!-- Timing fields -->
+    <input type="hidden" name="ts" id="login_ts">
+    <input type="hidden" name="elapsed" id="login_elapsed">
+
+    <!-- reCAPTCHA v3 token -->
+    <input type="hidden" name="recaptcha-token" id="recaptcha-token">
+    
+    <input type="hidden" name="next" value="{{ next }}">
+    <input type="text" name="username" placeholder="Username (email)" required>
+    <input type="password" name="password" placeholder="Password" required>
+    <button type="submit">Login</button>
+  </form>
+</div>
+
+<!-- Timing script -->
+<script>
+(function () {
+  const start = Date.now() / 1000;
+  document.getElementById('login_ts').value = start.toFixed(3);
+  document.getElementById('login-form').addEventListener('submit', function () {
+    const elapsed = (Date.now() / 1000) - start;
+    document.getElementById('login_elapsed').value = elapsed.toFixed(3);
+  });
+})();
+</script>
+
+<!-- reCAPTCHA v3 (keep your working site key here) -->
+<script src="https://www.google.com/recaptcha/api.js?render=6LeMRm4qAAAAADD-PhyZEaZz2nWI4DMYqeYw43uP"></script>
+<script>
+function executeRecaptcha() {
+  grecaptcha.ready(function() {
+    grecaptcha.execute('6LeMRm4qAAAAADD-PhyZEaZz2nWI4DMYqeYw43uP', { action: 'login' })
+      .then(function(token) {
+        document.getElementById('recaptcha-token').value = token;
+        document.getElementById('login-form').submit(); // submit after token set
+      });
+  });
+  return false; // prevent default; we'll submit manually
+}
+</script>
+{% endblock %}

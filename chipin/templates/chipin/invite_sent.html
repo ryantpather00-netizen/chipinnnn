@@ -1,0 +1,19 @@
+{% extends "chipin/base.html" %}
+{% block title %}Invite sent{% endblock %}
+{% block content %}
+  <h1>Invite sent ✅</h1>
+  {% if group %}
+    <p>Your invite for <strong>{{ group.name }}</strong>{% if invite and invite.invited_user %} to <strong>{{ invite.invited_user.username }}</strong>{% endif %} has been submitted.</p>
+    {% if invite %}
+      <p>Shareable join link (OK button target):</p>
+      <input type="text" value="{{ invite.accept_url }}" readonly style="width:100%">
+    {% endif %}
+    <p style="margin-top:1rem">
+      <a href="{% url 'chipin:group_detail' group.id %}">Back to group</a> ·
+      <a href="{% url 'chipin:invite_users' group.id %}">Invite another user</a>
+    </p>
+  {% else %}
+    <p>Your invitation has been submitted.</p>
+    <p><a href="{% url 'chipin:home' %}">Back to home</a></p>
+  {% endif %}
+{% endblock %}
