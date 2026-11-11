@@ -1,0 +1,21 @@
+{% extends 'chipin/base.html' %}
+{% block title %}Browse Groups{% endblock %}
+{% block content %}
+<h1>Browse Groups</h1>
+{% for group in groups %}
+    <h2><a href="{% url 'chipin:group_detail' group.id %}">{{ group.name }}</a></h2>
+    {% if group.id in joined_ids %}
+        <p>You are a member.</p>
+    {% elif group.id in pending_ids %}
+        <p>Join request pending.</p>
+    {% else %}
+        <form method="post" action="{% url 'chipin:request_to_join' group.id %}">
+            {% csrf_token %}
+            <button type="submit">Request to Join</button>
+        </form>
+    {% endif %}
+{% empty %}
+    <p>No groups available.</p>
+{% endfor %}
+<a href="{% url 'chipin:home' %}">Back to Homepage</a>
+{% endblock %}

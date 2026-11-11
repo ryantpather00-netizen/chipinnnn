@@ -1,4 +1,3 @@
-/* Basic styling for the header section */
 .header {
     display: flex;
     justify-content: space-between;
@@ -8,25 +7,25 @@
     border-bottom: 1px solid #ddd;
 }
 
-/* Style for the logo in the header */
+
 .logo img {
     max-height: 50px;
 }
 
-/* User info section within the header */
+
 .user-info {
     display: flex;
     align-items: center;
     font-size: 16px;
 }
 
-/* User information span */
+
 .user-info span {
     margin-right: 10px;
     font-weight: bold;
 }
 
-/* Logout button styling */
+
 .user-info button {
     background-color: #007BFF;
     color: white;
@@ -37,25 +36,25 @@
     font-size: 14px;
 }
 
-/* Logout button hover effect */
+
 .user-info button:hover {
     background-color: #0056b3;
 }
 
-/* Style for the messages */
+
 .messages {
     list-style-type: none;
     padding: 0;
     margin: 10px 0;
-    color: red; /* Change this color based on your message type */
+    color: red; 
 }
 
-/* Individual message items */
+
 .messages li {
     margin-bottom: 5px;
 }
 
-/* Styling for message tags, like error or success */
+
 .messages li.error {
     color: red;
 }
@@ -64,7 +63,7 @@
     color: green;
 }
 
-/* Basic button styling (for general use) */
+
 button {
     background-color: #28a745;
     color: white;
@@ -77,12 +76,12 @@ button {
     margin-bottom: 20px;
 }
 
-/* General button hover effect */
+
 button:hover {
     background-color: #218838;
 }
 
-/* Basic styling for links */
+
 a {
     color: #007BFF;
     text-decoration: none;

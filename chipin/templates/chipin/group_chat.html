@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{ group.name }} chat</title>
+<style>
+body{background:#f5f7fb;font-family:system-ui,-apple-system,sans-serif;color:#182336;margin:0}
+main{max-width:850px;margin:35px auto;padding:0 20px}header,.message,.composer{background:white;border:1px solid #dae0e7;border-radius:12px;padding:18px;margin-bottom:12px}
+header{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}h1{margin:0;font-size:24px}
+small,time{color:#637083}a{color:#1457a6}.message p{white-space:pre-wrap;overflow-wrap:anywhere}
+.actions{display:flex;gap:12px;align-items:center}.actions form{margin:0}button{border:0;background:#1461b5;color:white;padding:9px 15px;border-radius:7px;cursor:pointer}.danger{background:#a83333}
+textarea{width:100%;box-sizing:border-box;padding:12px;border:1px solid #aeb9c7;border-radius:8px;font:inherit;resize:vertical}.alerts{padding:8px}.empty{color:#637083}
+</style></head><body><main>
+<header><div><h1>{{ group.name }} — Group chat</h1><small>Only group members can view and post messages</small></div><a href="{% url 'chipin:group_detail' group.id %}">← Back to group</a></header>
+{% if messages %}<div class="alerts">{% for message in messages %}<p>{{ message }}</p>{% endfor %}</div>{% endif %}
+<section aria-label="Group messages">
+{% for comment in comments %}
+<article class="message"><strong>{{ comment.author.profile.nickname|default:comment.author.username }}</strong> <time datetime="{{ comment.created_at|date:'c' }}">{{ comment.created_at|date:'j M Y, g:i A' }}</time>
+<p>{{ comment.content }}</p>
+{% if comment.author_id == request.user.id or group.admin_id == request.user.id %}
+<div class="actions">
+{% if comment.author_id == request.user.id %}<a href="{% url 'chipin:edit_comment' group.id comment.id %}">Edit</a>{% endif %}
+<form method="post" action="{% url 'chipin:delete_comment' group.id comment.id %}">{% csrf_token %}<button class="danger" type="submit" onclick="return confirm('Delete this message?')">Delete</button></form>
+</div>{% endif %}</article>
+{% empty %}<p class="empty">No messages yet. Start the conversation below.</p>{% endfor %}
+</section>
+<section class="composer"><h2>New message</h2><form method="post" action="{% url 'chipin:post_comment' group.id %}">{% csrf_token %}{{ form.content.errors }}<p><label for="{{ form.content.id_for_label }}">Message</label></p>{{ form.content }}<p><button type="submit">Post message</button></p></form></section>
+</main></body></html>

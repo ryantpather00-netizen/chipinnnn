@@ -1,0 +1,21 @@
+{% extends 'chipin/base.html' %}
+{% block title %}Group Invite{% endblock %}
+{% block content %}
+<h1>Invite to {{ invite.group.name }}</h1>
+{% if invite.accepted %}
+    <p>You have already accepted this invite.</p>
+{% elif invite.is_expired %}
+    <p>This invite has expired.</p>
+{% else %}
+    <p>{{ invite.invited_by.username }} invited you to join this group.</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Accept Invite</button>
+    </form>
+    <form method="post" action="{% url 'chipin:decline_invite' invite.id %}">
+        {% csrf_token %}
+        <button type="submit">Decline Invite</button>
+    </form>
+{% endif %}
+<a href="{% url 'chipin:my_invites' %}">Back to Invites</a>
+{% endblock %}

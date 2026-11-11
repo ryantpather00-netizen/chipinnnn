@@ -1,0 +1,27 @@
+{% extends 'chipin/base.html' %}
+{% block title %}Join Requests{% endblock %}
+{% block content %}
+<h1>Join Requests for {{ group.name }}</h1>
+{% for jr in join_requests %}
+    <h3>{{ jr.user.profile.nickname|default:jr.user.username }}</h3>
+    <p>Approve: {{ jr.yes_count }} | Reject: {{ jr.no_count }}</p>
+    {% if jr.my_vote %}
+        <p>You voted {% if jr.my_vote.approve %}Approve{% else %}Reject{% endif %}.</p>
+    {% endif %}
+    <form method="post" action="{% url 'chipin:vote_join_request' group.id jr.id %}">
+        {% csrf_token %}
+        <button type="submit" name="vote" value="yes">Approve</button>
+        <button type="submit" name="vote" value="no">Reject</button>
+    </form>
+    {% if is_admin %}
+        <form method="post" action="{% url 'chipin:review_join_request' group.id jr.id %}">
+            {% csrf_token %}
+            <button type="submit" name="decision" value="approve">Accept Request</button>
+            <button type="submit" name="decision" value="reject">Reject Request</button>
+        </form>
+    {% endif %}
+{% empty %}
+    <p>No pending requests.</p>
+{% endfor %}
+<a href="{% url 'chipin:group_detail' group.id %}">Back to Group</a>
+{% endblock %}

@@ -35,3 +35,12 @@ def _unique_nickname(base: str) -> str:
         i += 1
         candidate = f"{base}-{i}"
     return candidate
+
+class Comment (models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="comments")
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Comment by {self.user.username} at {self.created_at}"

@@ -1,13 +1,58 @@
 {% extends 'chipin/base.html' %}
 {% block title %}{{ group.name }}{% endblock %}
 {% block content %}
-  <h1>{{ group.name }}</h1>
-  <p>Administrator: {{ group.admin.username }}</p>
-  <p>Members:</p>
-  <ul>
+<h1>{{ group.name }}</h1>
+<p>Administrator: {{ group.admin.profile.nickname|default:group.admin.username }}</p>
+
+{% if is_admin %}
+    <a href="{% url 'chipin:invite_users' group.id %}">Invite Users</a>
+{% endif %}
+<a href="{% url 'chipin:home' %}">Back to Homepage</a>
+
+<h2>Members</h2>
+<ul>
     {% for member in group.members.all %}
-      <li>{{ member.username }}</li>
+    <li>{{ member.profile.nickname|default:member.username }}</li>
+    {% empty %}
+    <li>No members yet.</li>
     {% endfor %}
-  </ul>
-  <a href="{% url 'chipin:invite_users' group.id %}">Invite Users</a> <a href="{% url 'chipin:home' %}">Back to Homepage</a>
+</ul>
+
+{% if not is_member %}
+    {% if my_join_request.status == 'pending' %}
+        <p>Your join request is pending.</p>
+    {% else %}
+        <form method="post" action="{% url 'chipin:request_to_join' group.id %}">
+            {% csrf_token %}
+            <button type="submit">Request to Join</button>
+        </form>
+    {% endif %}
+{% else %}
+    <p><a href="{% url 'chipin:group_join_requests' group.id %}">View Join Requests</a></p>
+    <h2>Group Chat</h2>
+    {% for comment in comments %}
+        <div class="comment">
+            <p><strong>{{ comment.author.profile.nickname|default:comment.author.username }}</strong>: {{ comment.content }}</p>
+            <small>Posted on {{ comment.created_at|date:'d M Y, g:i A' }}</small>
+            {% if comment.author == request.user %}
+                <a href="{% url 'chipin:edit_comment' group.id comment.id %}">Edit</a>
+            {% endif %}
+            {% if comment.author == request.user or is_admin %}
+                <form method="post" action="{% url 'chipin:delete_comment' group.id comment.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('Delete comment?')">Delete</button>
+                </form>
+            {% endif %}
+        </div>
+    {% empty %}
+        <p>No comments yet.</p>
+    {% endfor %}
+    <h3>Add a Comment</h3>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.content.errors }}
+        <p>{{ form.content }}</p>
+        <button type="submit">Post Comment</button>
+    </form>
+{% endif %}
 {% endblock %}

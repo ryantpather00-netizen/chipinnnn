@@ -1,21 +1,27 @@
 {% extends 'chipin/base.html' %}
-{% load static %}
 {% block title %}ChipIn{% endblock %}
 {% block content %}
 <h1>ChipIn</h1>
+<p><a href="{% url 'chipin:my_invites' %}">View Invites</a> | <a href="{% url 'chipin:browse_groups' %}">Browse Groups</a></p>
 <h2>Your Groups</h2>
 <ul>
-    {% for group in user.group_memberships.all %}
+    {% for group in groups %}
     <li>
         <a href="{% url 'chipin:group_detail' group.id %}">{{ group.name }}</a>
         {% if group.admin == request.user %}
-            <a href="{% url 'chipin:delete_group' group.id %}" onclick="return confirm('Are you sure you want to delete this group?');">Delete</a>
+        <form method="post" action="{% url 'chipin:delete_group' group.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" onclick="return confirm('Delete this group?')">Delete</button>
+        </form>
         {% else %}
-            <a href="{% url 'chipin:leave_group' group.id %}" onclick="return confirm('Are you sure you want to leave this group?');">Leave</a>
+        <form method="post" action="{% url 'chipin:leave_group' group.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" onclick="return confirm('Leave this group?')">Leave</button>
+        </form>
         {% endif %}
     </li>
     {% empty %}
-    <li>You are not a member of any group yet.</li>
+    <li>You are not in any groups yet.</li>
     {% endfor %}
 </ul>
 <a href="{% url 'chipin:create_group' %}">Create a New Group</a>
