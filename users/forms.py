@@ -11,12 +11,12 @@ class UserRegistrationForm(UserCreationForm):
 
     class Meta:
         model = User
-        # No 'username' here — we set it from email in save()
+
         fields = ['email', 'password1', 'password2', 'first_name']
 
     def clean_email(self):
         email = self.cleaned_data['email'].strip().lower()
-        # since username = email, ensure no existing username/email matches
+
         if User.objects.filter(username__iexact=email).exists():
             raise forms.ValidationError("An account with this email already exists.")
         return email
@@ -33,14 +33,14 @@ class UserRegistrationForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         email = self.cleaned_data['email'].strip().lower()
-        user.username = email            # username mirrors email
+        user.username = email
         user.email = email
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['surname']
 
         if commit:
             user.save()
-            # ensure profile & nickname
+
             profile, _ = Profile.objects.get_or_create(user=user)
             profile.nickname = self.cleaned_data['nickname']
             profile.save(update_fields=['nickname'])

@@ -1,24 +1,23 @@
 {% extends 'chipin/base.html' %}
-{% block title %}Your Invites{% endblock %}
 {% block content %}
 <h1>Your Invites</h1>
 <ul>
-    {% for invite in invites %}
+  {% for invite in invites %}
     <li>
-        <strong>{{ invite.group.name }}</strong> - Invited by {{ invite.invited_by.username }}
-        {% if invite.is_expired %}
-            <p>This invite has expired.</p>
-        {% else %}
-            <a href="{% url 'chipin:accept_invite' invite.token %}">View Invite</a>
-            <form method="post" action="{% url 'chipin:decline_invite' invite.id %}" style="display:inline;">
-                {% csrf_token %}
-                <button type="submit">Decline</button>
-            </form>
-        {% endif %}
+      {{ invite.group.name }} - Invited by {{ invite.invited_by.username }}
+      {% if invite.is_expired %}
+        <p>Expired</p>
+      {% else %}
+        <a href="{% url 'chipin:accept_invite' invite.token %}">Accept Invite</a>
+        <form method="post" action="{% url 'chipin:decline_invite' invite.id %}" style="display:inline">
+          {% csrf_token %}
+          <button type="submit">Decline</button>
+        </form>
+      {% endif %}
     </li>
-    {% empty %}
-    <li>You have no invites.</li>
-    {% endfor %}
+  {% empty %}
+    <li>No invites yet.</li>
+  {% endfor %}
 </ul>
 <a href="{% url 'chipin:home' %}">Back to Homepage</a>
 {% endblock %}

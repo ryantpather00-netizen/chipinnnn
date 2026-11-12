@@ -1,58 +1,118 @@
 {% extends 'chipin/base.html' %}
 {% block title %}{{ group.name }}{% endblock %}
 {% block content %}
-<h1>{{ group.name }}</h1>
-<p>Administrator: {{ group.admin.profile.nickname|default:group.admin.username }}</p>
-
-{% if is_admin %}
-    <a href="{% url 'chipin:invite_users' group.id %}">Invite Users</a>
-{% endif %}
-<a href="{% url 'chipin:home' %}">Back to Homepage</a>
-
-<h2>Members</h2>
-<ul>
+  <h1>{{ group.name }}</h1>
+  <p>Administrator: {{ group.admin.username }}</p>
+  <p>Members:</p>
+  <ul>
     {% for member in group.members.all %}
-    <li>{{ member.profile.nickname|default:member.username }}</li>
-    {% empty %}
-    <li>No members yet.</li>
+      <li>{{ member.username }}</li>
     {% endfor %}
-</ul>
+  </ul>
+  {% if request.user == group.admin %}
+    <a href="{% url 'chipin:invite_users' group.id %}">Invite Users</a>
+  {% endif %}
+  <a href="{% url 'chipin:home' %}">Back to Homepage</a>
 
-{% if not is_member %}
+  {% if not is_member %}
     {% if my_join_request.status == 'pending' %}
-        <p>Your join request is pending.</p>
+      <p>Request pending.</p>
     {% else %}
-        <form method="post" action="{% url 'chipin:request_to_join' group.id %}">
-            {% csrf_token %}
-            <button type="submit">Request to Join</button>
-        </form>
+      <form method="post" action="{% url 'chipin:request_to_join' group.id %}">
+        {% csrf_token %}
+        <button type="submit">Request to Join</button>
+      </form>
     {% endif %}
-{% else %}
-    <p><a href="{% url 'chipin:group_join_requests' group.id %}">View Join Requests</a></p>
+  {% else %}
     <h2>Group Chat</h2>
     {% for comment in comments %}
-        <div class="comment">
-            <p><strong>{{ comment.author.profile.nickname|default:comment.author.username }}</strong>: {{ comment.content }}</p>
-            <small>Posted on {{ comment.created_at|date:'d M Y, g:i A' }}</small>
-            {% if comment.author == request.user %}
-                <a href="{% url 'chipin:edit_comment' group.id comment.id %}">Edit</a>
-            {% endif %}
-            {% if comment.author == request.user or is_admin %}
-                <form method="post" action="{% url 'chipin:delete_comment' group.id comment.id %}" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" onclick="return confirm('Delete comment?')">Delete</button>
-                </form>
-            {% endif %}
-        </div>
+      <p><strong>{{ comment.author.username }}</strong>: {{ comment.content }}</p>
+      <small>Posted on {{ comment.created_at }}</small>
+      {% if comment.author == request.user %}
+        <a href="{% url 'chipin:edit_comment' group.id comment.id %}">Edit</a>
+      {% endif %}
+      {% if comment.author == request.user or request.user == group.admin %}
+        <form method="post" action="{% url 'chipin:delete_comment' group.id comment.id %}" style="display:inline">
+          {% csrf_token %}
+          <button type="submit">Delete</button>
+        </form>
+      {% endif %}
     {% empty %}
-        <p>No comments yet.</p>
+      <p>No comments yet.</p>
     {% endfor %}
-    <h3>Add a Comment</h3>
+
+    <h3>{% if comment_to_edit %}Edit Comment{% else %}Add a comment{% endif %}</h3>
     <form method="post">
-        {% csrf_token %}
-        {{ form.content.errors }}
-        <p>{{ form.content }}</p>
-        <button type="submit">Post Comment</button>
+      {% csrf_token %}
+      {{ form.content.errors }}
+      {{ form.content }}
+      <button type="submit">{% if comment_to_edit %}Save Comment{% else %}Post Comment{% endif %}</button>
     </form>
-{% endif %}
+
+    <h2>Join Requests</h2>
+    <ul>
+      {% for jr in join_requests %}
+        <li>
+          {{ jr.user.username }} has requested to join.
+          <p>Approve: {{ jr.yes_count }} | Reject: {{ jr.no_count }}</p>
+          <form method="post" action="{% url 'chipin:vote_join_request' group.id jr.id %}" style="display:inline">
+            {% csrf_token %}
+            <button type="submit" name="vote" value="yes">Approve</button>
+            <button type="submit" name="vote" value="no">Reject</button>
+          </form>
+          {% if request.user == group.admin %}
+            <form method="post" action="{% url 'chipin:review_join_request' group.id jr.id %}" style="display:inline">
+              {% csrf_token %}
+              <button type="submit" name="decision" value="approve">Accept Request</button>
+              <button type="submit" name="decision" value="reject">Reject Request</button>
+            </form>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li>No join requests pending.</li>
+      {% endfor %}
+    </ul>
+
+    <h2>Group Events</h2>
+    {% if request.user == group.admin %}
+      <a href="{% url 'chipin:create_event' group.id %}">Create New Event</a>
+    {% endif %}
+    <ul>
+      {% for event, info in event_share_info.items %}
+        <li>
+          <strong>{{ event.name }}</strong> - Date: {{ event.date }},
+          <strong>Total Spend:</strong> ${{ event.total_spend }},
+          <strong>Current Share:</strong> ${{ info.share|floatformat:2 }},
+          <strong>Status:</strong> {{ info.status }}
+          {% if info.joined %}
+            <p>You have already joined this event.</p>
+            <form method="post" action="{% url 'chipin:leave_event' group.id event.id %}">
+              {% csrf_token %}
+              <button type="submit">Leave Event</button>
+            </form>
+          {% elif info.eligible %}
+            <p>You are eligible to join this event.</p>
+            <form method="post" action="{% url 'chipin:join_event' group.id event.id %}">
+              {% csrf_token %}
+              <button type="submit">Join Event</button>
+            </form>
+          {% else %}
+            <p>You are in the waiting room for this event.</p>
+          {% endif %}
+          {% if request.user == group.admin %}
+            <form method="post" action="{% url 'chipin:update_event_status' group.id event.id %}">
+              {% csrf_token %}
+              <button type="submit">Update Status</button>
+            </form>
+            <form method="post" action="{% url 'chipin:delete_event' group.id event.id %}">
+              {% csrf_token %}
+              <button type="submit">Delete Event</button>
+            </form>
+          {% endif %}
+        </li>
+      {% empty %}
+        <li>No events yet.</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 {% endblock %}

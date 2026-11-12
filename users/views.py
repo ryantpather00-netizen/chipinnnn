@@ -12,7 +12,7 @@ from .forms import UserRegistrationForm, EmailAuthenticationForm
 RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify"
 
 def _hp_name(request):
-    # stable per-session honeypot name to defeat autofill/scripts
+
     if "hp_name" not in request.session:
         request.session["hp_name"] = f"hp_{secrets.token_hex(8)}"
     return request.session["hp_name"]
@@ -21,12 +21,12 @@ def login_view(request):
     hp_name = _hp_name(request)
 
     if request.method == "POST":
-        # 1) Honeypot (cheap check first)
+
         if request.POST.get(hp_name):
             messages.error(request, "Bot detected.")
             return redirect("users:login")
 
-        # 2) Timing guard (humans rarely submit under 1.5s)
+
         try:
             elapsed = float(request.POST.get("elapsed", 0))
             if elapsed < 1.5:
@@ -35,7 +35,7 @@ def login_view(request):
         except (TypeError, ValueError):
             pass
 
-        # 3) reCAPTCHA verify (network call after cheap checks)
+
         token = request.POST.get("recaptcha-token")
         data = {
             "secret": settings.RECAPTCHA_SECRET_KEY,
@@ -52,13 +52,13 @@ def login_view(request):
             messages.error(request, "reCAPTCHA validation failed. Please try again.")
             return redirect("users:login")
 
-        # 4) Authenticate
+
         username = (request.POST.get("username") or "").strip().lower()
         password = request.POST.get("password") or ""
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            # rotate honeypot name after each successful POST
+
             request.session["hp_name"] = f"hp_{secrets.token_hex(8)}"
             next_url = request.GET.get("next", reverse("chipin:home"))
             return redirect(next_url)
@@ -66,7 +66,7 @@ def login_view(request):
             messages.error(request, "Invalid username or password.")
             return redirect("users:login")
 
-    # GET: render with the current hp_name
+
     next_url = request.GET.get("next", "")
     return render(request, "users/login.html", {"hp_name": hp_name, "next": next_url})
 
