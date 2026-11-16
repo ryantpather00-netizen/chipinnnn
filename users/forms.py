@@ -11,12 +11,10 @@ class UserRegistrationForm(UserCreationForm):
 
     class Meta:
         model = User
-
         fields = ['email', 'password1', 'password2', 'first_name']
 
     def clean_email(self):
         email = self.cleaned_data['email'].strip().lower()
-
         if User.objects.filter(username__iexact=email).exists():
             raise forms.ValidationError("An account with this email already exists.")
         return email
@@ -33,14 +31,14 @@ class UserRegistrationForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         email = self.cleaned_data['email'].strip().lower()
-        user.username = email
+        user.username = email            # username mirrors email
         user.email = email
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['surname']
 
         if commit:
             user.save()
-
+            # ensure profile & nickname
             profile, _ = Profile.objects.get_or_create(user=user)
             profile.nickname = self.cleaned_data['nickname']
             profile.save(update_fields=['nickname'])
@@ -51,4 +49,12 @@ class EmailAuthenticationForm(AuthenticationForm):
     username = forms.EmailField(
         label="Email",
         widget=forms.EmailInput(attrs={"autofocus": True})
+    )
+
+class TopUpForm(forms.Form):
+    amount = forms.DecimalField(
+        min_value=0.01,
+        max_digits=5,
+        decimal_places=2,
+        label="Amount to Top-Up"
     )

@@ -3,6 +3,8 @@
 {% block title %}ChipIn{% endblock %}
 {% block content %}
 <h1>ChipIn</h1>
+<h2>Current Balance: ${{ balance }}</h2>
+<a href="{% url 'users:top_up' %}">Top Up Balance</a>
 <p><a href="{% url 'chipin:my_invites' %}">View Invites</a> | <a href="{% url 'chipin:browse_groups' %}">Browse Groups</a></p>
 <h2>Your Groups</h2>
 <ul>

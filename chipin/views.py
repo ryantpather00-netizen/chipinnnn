@@ -11,9 +11,13 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 import uuid
 
+
 @login_required(login_url='users:login')
 def home(request):
-    return render(request, "chipin/home.html")
+    profile = request.user.profile
+    return render(request, "chipin/home.html", {
+        'balance': profile.balance
+    })
 
 @login_required
 def create_group(request):
