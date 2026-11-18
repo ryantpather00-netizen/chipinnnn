@@ -22,4 +22,30 @@
     {% endfor %}
 </ul>
 <a href="{% url 'chipin:create_group' %}">Create a New Group</a>
+<h2>Transactions</h2>
+
+<div style="max-height: 300px; overflow-y: auto; margin-bottom: 16px;">
+    <table style="border-collapse: collapse; width: 100%;">
+        <thead>
+            <tr>
+                <th style="padding: 8px; border-bottom: 1px solid #ccc;">Date</th>
+                <th style="padding: 8px; border-bottom: 1px solid #ccc;">Amount</th>
+                <th style="padding: 8px; border-bottom: 1px solid #ccc;">Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tx in transactions %}
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ tx.created_at }}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">${{ tx.amount }}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ tx.description }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="3" style="padding: 8px;">No transactions to display.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

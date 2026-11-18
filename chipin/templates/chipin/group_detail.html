@@ -84,6 +84,9 @@
           <strong>Total Spend:</strong> ${{ event.total_spend }},
           <strong>Current Share:</strong> ${{ info.share|floatformat:2 }},
           <strong>Status:</strong> {{ info.status }}
+          {% if event.status == 'Archived' %}
+            <p>This event is archived, and no further actions are allowed.</p>
+          {% else %}
           {% if info.joined %}
             <p>You have already joined this event.</p>
             <form method="post" action="{% url 'chipin:leave_event' group.id event.id %}">
@@ -109,6 +112,17 @@
               <button type="submit">Delete Event</button>
             </form>
           {% endif %}
+
+          {% if request.user == group.admin and event.status == 'Active' %}
+            <form action="{% url 'chipin:transfer_funds' group.id event.id %}" method="post" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" onclick="return confirm('Transfer funds for this event? This action is irreversible.');">
+            Transfer Funds
+              </button>
+    </form>
+{% endif %}
+{% endif %}
+
         </li>
       {% empty %}
         <li>No events yet.</li>

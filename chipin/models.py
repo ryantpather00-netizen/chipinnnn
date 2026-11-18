@@ -94,6 +94,10 @@ class Event(models.Model):
         return self.total_spend / members_count
 
     def check_status(self):
+
+        if self.status == self.Status.ARCHIVED:
+            return False
+
         share = self.calculate_share()
         for member in self.group.members.all():
             if member.profile.max_spend < share:
@@ -104,3 +108,10 @@ class Event(models.Model):
 
     def __str__(self):
         return self.name
+
+
+    def archive(self, save=True):
+        self.status = self.Status.ARCHIVED
+        self.archived_at = timezone.now()
+        if save:
+            self.save(update_fields=["status", "archived_at"])

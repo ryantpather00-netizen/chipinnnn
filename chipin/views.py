@@ -9,15 +9,24 @@ from .models import Group, Invite, GroupJoinRequest, JoinRequestVote, Comment, E
 from .forms import GroupCreationForm, CommentForm
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+from decimal import Decimal
+from django.db import transaction, DatabaseError
+from django.db.models import F
+from users.models import Profile, Transaction
 import uuid
-
 
 @login_required(login_url='users:login')
 def home(request):
     profile = request.user.profile
+    transactions = Transaction.objects.filter(
+        user=request.user
+    ).order_by('-created_at')
+
     return render(request, "chipin/home.html", {
-        'balance': profile.balance
+        'balance': profile.balance,
+        'transactions': transactions
     })
+
 
 @login_required
 def create_group(request):
@@ -330,6 +339,9 @@ def create_event(request, group_id):
 def join_event(request, group_id, event_id):
     group = get_object_or_404(Group, id=group_id)
     event = get_object_or_404(Event, id=event_id, group=group)
+    if event.status == Event.Status.ARCHIVED:
+        messages.error(request, "This event is archived.")
+        return redirect('chipin:group_detail', group_id=group_id)
     if request.user not in group.members.all():
         messages.error(request, 'You must join the group first.')
     elif request.user.profile.max_spend < event.calculate_share():
@@ -348,6 +360,9 @@ def join_event(request, group_id, event_id):
 def update_event_status(request, group_id, event_id):
     group = get_object_or_404(Group, id=group_id)
     event = get_object_or_404(Event, id=event_id, group=group)
+    if event.status == Event.Status.ARCHIVED:
+        messages.error(request, "This event is archived.")
+        return redirect('chipin:group_detail', group_id=group_id)
     if request.user == group.admin:
         event.check_status()
         event.save()
@@ -358,6 +373,9 @@ def update_event_status(request, group_id, event_id):
 def leave_event(request, group_id, event_id):
     group = get_object_or_404(Group, id=group_id)
     event = get_object_or_404(Event, id=event_id, group=group)
+    if event.status == Event.Status.ARCHIVED:
+        messages.error(request, "This event is archived.")
+        return redirect('chipin:group_detail', group_id=group_id)
     if request.user in event.members.all():
         event.members.remove(request.user)
         event.check_status()
@@ -369,6 +387,126 @@ def leave_event(request, group_id, event_id):
 def delete_event(request, group_id, event_id):
     group = get_object_or_404(Group, id=group_id)
     event = get_object_or_404(Event, id=event_id, group=group)
+    if event.status == Event.Status.ARCHIVED:
+        messages.error(request, "This event is archived.")
+        return redirect('chipin:group_detail', group_id=group_id)
     if request.user == group.admin:
         event.delete()
     return redirect('chipin:group_detail', group_id=group.id)
+
+
+@login_required
+def transfer_funds(request, group_id, event_id):
+    group = get_object_or_404(Group, id=group_id)
+
+    if request.method != 'POST':
+        messages.error(request, "Invalid request method.")
+        return redirect('chipin:group_detail', group_id=group_id)
+
+    if request.user != group.admin:
+        messages.error(request, "Only the group admin can transfer funds.")
+        return redirect('chipin:group_detail', group_id=group_id)
+
+    try:
+        with transaction.atomic():
+            event = get_object_or_404(
+                Event.objects.select_for_update(),
+                id=event_id,
+                group=group
+            )
+
+            if event.status != Event.Status.ACTIVE:
+                raise ValueError("Only active events can transfer funds.")
+
+            if event.total_spend <= 0:
+                raise ValueError("The event must have a positive total spend.")
+
+            payers = list(event.members.all())
+
+            if not payers:
+                payers = list(group.members.all())
+
+            if group.admin not in payers:
+                payers.append(group.admin)
+
+            profiles = {
+                profile.user_id: profile
+                for profile in Profile.objects.select_for_update().filter(user__in=payers)
+            }
+
+            if len(profiles) != len(payers):
+                raise ValueError("A participant does not have a profile.")
+
+            excluded = []
+
+            while True:
+                if group.admin not in payers or len(payers) < 2:
+                    raise ValueError("Not enough eligible payers to transfer funds.")
+
+                total_cents = int(event.total_spend * 100)
+                base, remainder = divmod(total_cents, len(payers))
+
+                shares = {
+                    user.id: Decimal(base + (i < remainder)) / Decimal('100')
+                    for i, user in enumerate(payers)
+                }
+
+                not_eligible = [
+                    user for user in payers
+                    if profiles[user.id].balance < shares[user.id]
+                    or profiles[user.id].max_spend < shares[user.id]
+                ]
+
+                if not not_eligible:
+                    break
+
+                excluded.extend(not_eligible)
+                payers = [user for user in payers if user not in not_eligible]
+
+            for user in payers:
+                amount = shares[user.id]
+
+                updated = Profile.objects.filter(
+                    user=user,
+                    balance__gte=amount
+                ).update(balance=F('balance') - amount)
+
+                if updated != 1:
+                    raise ValueError("A member has insufficient funds.")
+
+                Transaction.objects.create(
+                    user=user,
+                    event=event,
+                    amount=-amount,
+                    description=f"Contribution for event '{event.name}'"
+                )
+
+            Profile.objects.filter(user=group.admin).update(
+                balance=F('balance') + event.total_spend
+            )
+
+            Transaction.objects.create(
+                user=group.admin,
+                event=event,
+                amount=event.total_spend,
+                description=f"Funds received for event '{event.name}'"
+            )
+
+            event.archive()
+
+    except ValueError as error:
+        messages.error(request, str(error))
+        return redirect('chipin:group_detail', group_id=group_id)
+
+    except DatabaseError:
+        messages.error(request, "Transfer failed. No balances were changed.")
+        return redirect('chipin:group_detail', group_id=group_id)
+
+    msg = f"Transferred ${event.total_spend} from {len(payers)} payers."
+
+    if excluded:
+        names = ", ".join(user.username for user in excluded)
+        msg += f" Excluded: {names}."
+
+    messages.success(request, msg)
+    return redirect('chipin:group_detail', group_id=group_id)
